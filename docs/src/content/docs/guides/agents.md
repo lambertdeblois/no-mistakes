@@ -117,7 +117,9 @@ no-mistakes axi abort --run <id>
 ```
 
 Before starting validation, agents should run the `no-mistakes axi` home view.
-If it shows `active_run`, they should resume or abort that current-branch run instead of starting over.
+If it shows `active_run`, inspect that current-branch run with `no-mistakes axi status`.
+If it is parked at a gate, drive it with `no-mistakes axi respond`.
+Reattach an in-flight run by re-running `no-mistakes axi run` when it still matches your current `HEAD`.
 If it shows `other_branch_active_run`, they should leave that run alone and start validation for the current branch with `no-mistakes axi run --intent "..."`.
 Use `no-mistakes axi abort --run <id>` only when you need to cancel a specific active run by id from outside its worktree.
 
@@ -128,9 +130,13 @@ Approval gates are exposed as `gate:` objects with finding IDs, severities, file
 While a non-terminal run is parked at an `awaiting_approval` or `fix_review` gate, the run object also includes `awaiting_agent: parked <duration>`.
 Use that field in `axi status` output to tell in one read that the run is waiting for the driving agent to send `axi respond`, not actively running, fixing, or watching CI.
 It is observability only: it does not auto-resume the run, change gate resolution, or make `--yes` the default.
+A long-running `axi run` or `axi respond` call is working, not stalled, and an agent may background it if its harness needs to, but the run never advances past a gate on its own, so the agent must read every return and respond at each `gate:`, looping until an `outcome:`, and never idle-wait for the run to move forward by itself.
 An agent should resolve `action: auto-fix` findings on its own judgment, ignore `action: no-op` findings when approving, and stop on `action: ask-user` findings unless it is running with explicit `--yes` consent.
+Review auto-fix is disabled by default (`auto_fix.review: 0`; a repo or global `auto_fix.review > 0` override re-enables it), so blocking and ask-user review findings park for your decision rather than being silently self-fixed.
+The review gate output flags this with a `note`.
 When it stops for `ask-user`, it should relay each finding's ID, file, and full description to the user before choosing `approve`, `fix`, or `skip`.
 Resolving a finding always means responding with `no-mistakes axi respond --action fix`, which has the pipeline apply the fix and re-review it - the agent must not edit the code itself while a run is active.
+For the same reason, while a run is active the agent must not `abort` or `rerun` to go fix a finding itself - even a real bug in its own code - because that discards the pipeline's in-flight work and forces a full re-validation; `abort` and `rerun` are between-runs actions, correct only after a `failed` or `cancelled` outcome, never a way to circumvent a gate.
 Successful outputs can be `outcome: passed` for a completed run or `outcome: checks-passed` when CI has passed and the daemon is still monitoring the unmerged PR for humans, and may include a `fixes` table when the pipeline applied fixes.
 
 ## Binary resolution

@@ -51,6 +51,26 @@ func TestBodyDocumentsTaskFirstFlow(t *testing.T) {
 	}
 }
 
+func TestBodyDocumentsAxiGateGuidance(t *testing.T) {
+	md := Markdown()
+	for _, want := range []string{
+		"inspect it with `no-mistakes axi status`",
+		"drive it with `no-mistakes axi respond`",
+		"when it still matches your current `HEAD`",
+		"**Review auto-fix is disabled by default**",
+		"blocking and",
+		"ask-user review findings park for your decision",
+		"`auto_fix.review > 0`",
+	} {
+		if !strings.Contains(md, want) {
+			t.Errorf("body should document AXI gate guidance: missing %q", want)
+		}
+	}
+	if strings.Contains(md, "drive it to an outcome with `axi respond`") {
+		t.Errorf("body should not tell agents to resume non-parked runs with axi respond")
+	}
+}
+
 func TestInstallWritesBothPaths(t *testing.T) {
 	root := t.TempDir()
 	written, err := Install(root)
