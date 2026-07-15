@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-REPO="kunchenguid/no-mistakes"
+REPO="lambertdeblois/no-mistakes"
 INSTALL_DIR="${NO_MISTAKES_INSTALL_DIR:-$HOME/.no-mistakes/bin}"
 LINK_DIR="${NO_MISTAKES_LINK_DIR:-}"
 
