@@ -237,6 +237,16 @@ Fields not set here inherit from global config and then the built-in defaults.
 
 Valid `disabled_readers` values are `claude`, `codex`, `opencode`, `rovodev`, `pi`, and `copilot`.
 
+### pr_draft
+
+Controls whether new pull requests are opened in draft mode.
+
+| Field | Type | Default |
+|---|---|---|
+| `pr_draft` | `bool` | `true` |
+
+Set to `false` to open pull requests as ready for review immediately.
+
 ### test.evidence
 
 Override where evidence artifacts from the test step are stored.

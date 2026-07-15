@@ -95,6 +95,7 @@ type PR struct {
 type PRContent struct {
 	Title string
 	Body  string
+	Draft bool
 }
 
 // PRState is the normalized lifecycle state of a PR.

@@ -117,6 +117,9 @@ type RepoConfig struct {
 	// able to turn it off (or on). Default false; a plain bool so a missing key
 	// or a YAML/JSON null is falsy and preserves current loading.
 	DisableProjectSettings bool `yaml:"disable_project_settings"`
+	// PRDraft controls whether new pull requests are opened in draft mode.
+	// A nil pointer means "not set" and resolves to the default (true).
+	PRDraft *bool `yaml:"pr_draft"`
 }
 
 // DocumentRaw is the YAML representation of document-step settings.
@@ -138,6 +141,7 @@ func (c *RepoConfig) UnmarshalYAML(value *yaml.Node) error {
 		Test                   TestRaw     `yaml:"test"`
 		Document               DocumentRaw `yaml:"document"`
 		DisableProjectSettings bool        `yaml:"disable_project_settings"`
+		PRDraft                *bool       `yaml:"pr_draft"`
 	}
 	var raw repoConfigRaw
 	if err := value.Decode(&raw); err != nil {
@@ -153,6 +157,7 @@ func (c *RepoConfig) UnmarshalYAML(value *yaml.Node) error {
 	c.Test = raw.Test
 	c.Document = raw.Document
 	c.DisableProjectSettings = raw.DisableProjectSettings
+	c.PRDraft = raw.PRDraft
 	return nil
 }
 
@@ -209,6 +214,9 @@ type Config struct {
 	// project-level settings/instructions suppressed; the daemon fails the run
 	// closed if the resolved harness has no verified suppression knob.
 	DisableProjectSettings bool
+	// PRDraft controls whether new pull requests are opened in draft mode.
+	// Default true.
+	PRDraft bool
 }
 
 // Document is the resolved document-step config. Instructions come from the
@@ -999,6 +1007,15 @@ func intentDefaults() Intent {
 	}
 }
 
+// prDraftDefault resolves the pr_draft config value. Returns true when the
+// field is unset (nil), preserving the default-draft behavior.
+func prDraftDefault(v *bool) bool {
+	if v == nil {
+		return true
+	}
+	return *v
+}
+
 // applyIntentOverrides applies non-nil raw values onto resolved defaults.
 func applyIntentOverrides(dst *Intent, src *IntentRaw) {
 	if src.Enabled != nil {
@@ -1132,6 +1149,7 @@ func Merge(global *GlobalConfig, repo *RepoConfig) *Config {
 		// repo is the EffectiveRepoConfig result, so this value is already
 		// trusted-only (EffectiveRepoConfig sourced it from the trusted copy).
 		DisableProjectSettings: repo.DisableProjectSettings,
+		PRDraft:                prDraftDefault(repo.PRDraft),
 	}
 
 	if repo.Agent != "" {

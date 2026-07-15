@@ -78,6 +78,8 @@ func (s *PRStep) Execute(sctx *pipeline.StepContext) (*pipeline.StepOutcome, err
 	if err != nil {
 		return nil, err
 	}
+	draft := sctx.Config != nil && sctx.Config.PRDraft
+	scmContent := scm.PRContent{Title: content.Title, Body: content.Body, Draft: draft}
 
 	sctx.Log(fmt.Sprintf("checking for existing pull request on branch %s...", branch))
 	existing, err := host.FindPR(ctx, branch, sctx.Repo.DefaultBranch)
@@ -86,7 +88,7 @@ func (s *PRStep) Execute(sctx *pipeline.StepContext) (*pipeline.StepOutcome, err
 	}
 	if existing != nil {
 		sctx.Log(fmt.Sprintf("pull request already exists: %s, updating...", describePR(existing)))
-		updated, err := host.UpdatePR(ctx, existing, scm.PRContent(content))
+		updated, err := host.UpdatePR(ctx, existing, scmContent)
 		if err != nil {
 			sctx.Log(fmt.Sprintf("warning: failed to update PR: %v", err))
 			updated = existing
@@ -101,7 +103,7 @@ func (s *PRStep) Execute(sctx *pipeline.StepContext) (*pipeline.StepOutcome, err
 	}
 
 	sctx.Log("creating pull request...")
-	created, err := host.CreatePR(ctx, branch, sctx.Repo.DefaultBranch, scm.PRContent(content))
+	created, err := host.CreatePR(ctx, branch, sctx.Repo.DefaultBranch, scmContent)
 	if err != nil {
 		return nil, err
 	}
