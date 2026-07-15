@@ -29,8 +29,8 @@ func TestNoMistakesRequiredWorkflowExemptsReleaseAutomation(t *testing.T) {
 	}
 }
 
-// TestNoMistakesRequiredWorkflowChecksSignatureMarker pins the exact signature
-// string the check greps for. It must match the literal line produced by
+// TestNoMistakesRequiredWorkflowChecksSignatureMarker pins the exact marker
+// string the check greps for. It must match the literal section heading produced by
 // internal/pipeline/steps/prsummary.go when building the Pipeline section.
 func TestNoMistakesRequiredWorkflowChecksSignatureMarker(t *testing.T) {
 	data, err := os.ReadFile(".github/workflows/no-mistakes-required.yml")
@@ -39,9 +39,9 @@ func TestNoMistakesRequiredWorkflowChecksSignatureMarker(t *testing.T) {
 	}
 	content := string(data)
 
-	marker := "Updates from [git push no-mistakes](https://github.com/kunchenguid/no-mistakes)"
+	marker := "## Pipeline"
 	if !strings.Contains(content, marker) {
-		t.Fatalf("workflow must grep for the prsummary.go signature marker:\n  %s", marker)
+		t.Fatalf("workflow must grep for the prsummary.go pipeline section marker:\n  %s", marker)
 	}
 
 	summary, err := os.ReadFile("internal/pipeline/steps/prsummary.go")
