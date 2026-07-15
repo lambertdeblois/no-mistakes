@@ -19,8 +19,8 @@ func TestNoMistakesRequiredWorkflowChecksPipelineSignature(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read required workflow: %v", err)
 	}
-	if !strings.Contains(string(workflow), "marker='"+noMistakesPRSignature+"'") {
-		t.Fatalf("required workflow does not check the generated PR signature %q", noMistakesPRSignature)
+	if !strings.Contains(string(workflow), "marker='## Pipeline'") {
+		t.Fatalf("required workflow does not check the generated pipeline section marker")
 	}
 }
 
@@ -41,8 +41,8 @@ func TestBuildPipelineSummary_AllClean(t *testing.T) {
 	if !strings.Contains(md, "## Pipeline") {
 		t.Error("missing Pipeline heading")
 	}
-	if !strings.Contains(md, "[git push no-mistakes](https://github.com/kunchenguid/no-mistakes)") {
-		t.Errorf("expected linked tagline, got:\n%s", md)
+	if strings.Contains(md, "git push no-mistakes") {
+		t.Errorf("unexpected tagline in pipeline summary, got:\n%s", md)
 	}
 	if strings.Count(md, "<details>") != len(steps) {
 		t.Fatalf("expected one collapsible per step, got:\n%s", md)

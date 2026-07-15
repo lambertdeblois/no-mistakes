@@ -19,7 +19,6 @@ import (
 const (
 	maxEmbeddedArtifactBytes       = 16 * 1024
 	maxEmbeddedArtifactsTotalBytes = 32 * 1024
-	noMistakesPRSignature          = "Updates from [git push no-mistakes](https://github.com/kunchenguid/no-mistakes)"
 )
 
 type testingArtifactRenderState struct {
@@ -61,8 +60,6 @@ func BuildPipelineSummary(steps []*db.StepResult, rounds map[string][]*db.StepRo
 
 	var b strings.Builder
 	b.WriteString("## Pipeline\n\n")
-	b.WriteString(noMistakesPRSignature)
-	b.WriteString("\n\n")
 	for i, detail := range detailBlocks {
 		if i > 0 {
 			b.WriteString("\n")

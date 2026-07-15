@@ -42,7 +42,6 @@ func TestDemoSteps(t *testing.T) {
 		types.StepLint,
 		types.StepPush,
 		types.StepPR,
-		types.StepCI,
 	}
 	if len(steps) != len(want) {
 		t.Fatalf("DemoSteps() returned %d steps, want %d", len(steps), len(want))
@@ -62,7 +61,7 @@ func TestAllStepsDemoMode(t *testing.T) {
 	// Verify we get demo steps, not real ones, by checking the type.
 	for _, s := range steps {
 		switch s.(type) {
-		case *demoStep, *demoCIStep:
+		case *demoStep:
 			// ok
 		default:
 			t.Fatalf("expected demo step type in demo mode, got %T", s)

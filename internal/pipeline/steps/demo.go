@@ -100,9 +100,6 @@ func DemoSteps() []pipeline.Step {
 			log:        "Creating pull request...\nhttps://github.com/kunchenguid/no-mistakes/pull/42",
 			prURL:      "https://github.com/kunchenguid/no-mistakes/pull/42",
 		},
-		&demoCIStep{
-			displayDur: 120 * time.Second,
-		},
 	}
 }
 

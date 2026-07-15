@@ -86,6 +86,57 @@ func TestTightenTitlePrefixesNonConventionalTitles(t *testing.T) {
 	}
 }
 
+func TestExtractJiraKey(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		branch string
+		want   string
+	}{
+		{branch: "TBUD-190", want: "TBUD-190"},
+		{branch: "feature/TBUD-190", want: "TBUD-190"},
+		{branch: "TBUD-190-add-retry", want: "TBUD-190"},
+		{branch: "feature/TBUD-190-add-retry-logic", want: "TBUD-190"},
+		{branch: "main", want: ""},
+		{branch: "fix-some-bug", want: ""},
+		{branch: "", want: ""},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.branch, func(t *testing.T) {
+			t.Parallel()
+			if got := ExtractJiraKey(tc.branch); got != tc.want {
+				t.Fatalf("ExtractJiraKey(%q) = %q, want %q", tc.branch, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestInjectScope(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		title string
+		scope string
+		want  string
+	}{
+		{title: "feat: add retry logic", scope: "TBUD-190", want: "feat(TBUD-190): add retry logic"},
+		{title: "fix(pipeline): correct timeout", scope: "TBUD-190", want: "fix(TBUD-190): correct timeout"},
+		{title: "chore!: drop legacy api", scope: "TBUD-190", want: "chore(TBUD-190)!: drop legacy api"},
+		{title: "feat(cli): add flag", scope: "", want: "feat(cli): add flag"},
+		{title: "not a conventional title", scope: "TBUD-190", want: "not a conventional title"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.title, func(t *testing.T) {
+			t.Parallel()
+			if got := InjectScope(tc.title, tc.scope); got != tc.want {
+				t.Fatalf("InjectScope(%q, %q) = %q, want %q", tc.title, tc.scope, got, tc.want)
+			}
+		})
+	}
+}
+
 func TestIsTitle(t *testing.T) {
 	t.Parallel()
 

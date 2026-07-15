@@ -7,6 +7,9 @@ import (
 
 var titleRe = regexp.MustCompile(`^([a-z]+)(\([^)]+\))?(!)?: (.+)$`)
 
+// jiraKeyRe matches a Jira-style ticket key anywhere in a string, e.g. TBUD-190.
+var jiraKeyRe = regexp.MustCompile(`\b([A-Z][A-Z0-9]+-\d+)\b`)
+
 var validTypes = map[string]bool{
 	"feat":     true,
 	"fix":      true,
@@ -22,6 +25,38 @@ var validTypes = map[string]bool{
 }
 
 const ReleaseTypeRule = `- If the change has any user-facing product impact, the type must use feat or fix so release automation can pick it up. Use feat for a new user-visible capability and fix for a user-visible correction or behavior improvement. Use docs, refactor, chore, test, build, or ci only when the change has no user-facing product behavior impact.`
+
+// ExtractJiraKey returns the first Jira ticket key found in branch, e.g.
+// "TBUD-190" from "feature/TBUD-190-add-retry". Returns "" if none found.
+func ExtractJiraKey(branch string) string {
+	m := jiraKeyRe.FindStringSubmatch(branch)
+	if len(m) < 2 {
+		return ""
+	}
+	return m[1]
+}
+
+// InjectScope rewrites a conventional commit title to use scope as its scope,
+// replacing any scope the agent may have chosen. The title must already be in
+// conventional commit format; if it is not, it is returned unchanged.
+//
+// Examples:
+//
+//	InjectScope("feat: add retry", "TBUD-190")      → "feat(TBUD-190): add retry"
+//	InjectScope("feat(pipeline): add retry", "TBUD-190") → "feat(TBUD-190): add retry"
+func InjectScope(title, scope string) string {
+	if scope == "" {
+		return title
+	}
+	m := titleRe.FindStringSubmatch(strings.TrimSpace(title))
+	if len(m) == 0 || !validTypes[m[1]] {
+		return title
+	}
+	typ := m[1]
+	bang := m[3]
+	description := m[4]
+	return typ + "(" + scope + ")" + bang + ": " + description
+}
 
 func IsTitle(title string) bool {
 	m := titleRe.FindStringSubmatch(strings.TrimSpace(title))

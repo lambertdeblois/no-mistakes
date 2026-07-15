@@ -92,8 +92,6 @@ func (s StepName) Order() int {
 		return 7
 	case StepPR:
 		return 8
-	case StepCI:
-		return 9
 	default:
 		return 0
 	}
@@ -101,7 +99,7 @@ func (s StepName) Order() int {
 
 // AllSteps returns all pipeline steps in execution order.
 func AllSteps() []StepName {
-	return []StepName{StepIntent, StepRebase, StepReview, StepTest, StepDocument, StepLint, StepPush, StepPR, StepCI}
+	return []StepName{StepIntent, StepRebase, StepReview, StepTest, StepDocument, StepLint, StepPush, StepPR}
 }
 
 // StepStatus represents the lifecycle state of a pipeline step.

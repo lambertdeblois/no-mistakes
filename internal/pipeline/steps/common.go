@@ -136,6 +136,5 @@ func AllSteps() []pipeline.Step {
 		&LintStep{},
 		&PushStep{},
 		&PRStep{},
-		&CIStep{},
 	}
 }

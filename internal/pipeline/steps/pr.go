@@ -193,6 +193,9 @@ Diff stat:
 				if content.Title != originalTitle {
 					slog.Warn("tightened agent PR title type", "from", originalTitle, "to", content.Title)
 				}
+				if jiraKey := conventional.ExtractJiraKey(branch); jiraKey != "" {
+					content.Title = conventional.InjectScope(content.Title, jiraKey)
+				}
 				if bodyLimit > 0 {
 					content.Body = assemblePRBody(sctx, content.Body, riskLine, testingMD, pipelineMD, bodyLimit)
 				} else {
@@ -966,6 +969,9 @@ func fallbackPRContent(sctx *pipeline.StepContext, branch, commitLog, riskLine, 
 		title = "chore: update pull request"
 	} else {
 		title = conventional.TightenTitle(title)
+	}
+	if jiraKey := conventional.ExtractJiraKey(branch); jiraKey != "" {
+		title = conventional.InjectScope(title, jiraKey)
 	}
 	body := fmt.Sprintf("## What Changed\n\n%s", strings.TrimSpace(commitLog))
 	if body == "## What Changed\n\n" {
