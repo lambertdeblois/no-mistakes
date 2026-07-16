@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"strings"
 	"unicode/utf8"
 
@@ -132,6 +134,7 @@ func describePR(pr *scm.PR) string {
 
 func (s *PRStep) buildPRContent(sctx *pipeline.StepContext, branch, baseSHA string, bodyLimit int) (prContent, error) {
 	ctx := sctx.Ctx
+	templateBody, hasTemplateBody := loadPRTemplateBody(sctx.WorkDir)
 	commitLog, _ := git.Log(ctx, sctx.WorkDir, baseSHA, sctx.Run.HeadSHA)
 	diffStat, _ := git.Run(ctx, sctx.WorkDir, "diff", "--stat", baseSHA+".."+sctx.Run.HeadSHA)
 
@@ -198,7 +201,12 @@ Diff stat:
 				if jiraKey := conventional.ExtractJiraKey(branch); jiraKey != "" {
 					content.Title = conventional.InjectScope(content.Title, jiraKey)
 				}
-				if bodyLimit > 0 {
+				if hasTemplateBody {
+					content.Body = templateBody
+					if bodyLimit > 0 {
+						content.Body = scm.ClampPRBody(content.Body, bodyLimit)
+					}
+				} else if bodyLimit > 0 {
 					content.Body = assemblePRBody(sctx, content.Body, riskLine, testingMD, pipelineMD, bodyLimit)
 				} else {
 					content.Body = buildPRBody(content.Body, riskLine, testingMD, pipelineMD, sctx)
@@ -208,7 +216,66 @@ Diff stat:
 		}
 	}
 
-	return fallbackPRContent(sctx, branch, commitLog, riskLine, testingMD, pipelineMD, bodyLimit), nil
+	fallback := fallbackPRContent(sctx, branch, commitLog, riskLine, testingMD, pipelineMD, bodyLimit)
+	if hasTemplateBody {
+		fallback.Body = templateBody
+		if bodyLimit > 0 {
+			fallback.Body = scm.ClampPRBody(fallback.Body, bodyLimit)
+		}
+	}
+	return fallback, nil
+}
+
+func loadPRTemplateBody(workDir string) (string, bool) {
+	if workDir == "" {
+		return "", false
+	}
+
+	for _, rel := range []string{
+		".github/PULL_REQUEST_TEMPLATE.md",
+		".github/pull_request_template.md",
+		"PULL_REQUEST_TEMPLATE.md",
+		"pull_request_template.md",
+		"docs/PULL_REQUEST_TEMPLATE.md",
+		"docs/pull_request_template.md",
+	} {
+		if body, ok := readPRTemplateFile(filepath.Join(workDir, rel)); ok {
+			return body, true
+		}
+	}
+
+	for _, relDir := range []string{
+		".github/PULL_REQUEST_TEMPLATE",
+		"PULL_REQUEST_TEMPLATE",
+	} {
+		dir := filepath.Join(workDir, relDir)
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+			if body, ok := readPRTemplateFile(filepath.Join(dir, entry.Name())); ok {
+				return body, true
+			}
+		}
+	}
+
+	return "", false
+}
+
+func readPRTemplateFile(path string) (string, bool) {
+	data, err := os.ReadFile(path)
+	if err != nil || !utf8.Valid(data) {
+		return "", false
+	}
+	body := strings.TrimSpace(string(data))
+	if body == "" {
+		return "", false
+	}
+	return body, true
 }
 
 // buildPipelineSection queries step results and rounds from the DB and

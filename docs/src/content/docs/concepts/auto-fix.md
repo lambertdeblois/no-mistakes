@@ -86,11 +86,11 @@ It allows a legitimate forward commit made by an agent, but aborts the run if an
 
 | Step | Commit prefix |
 |---|---|
-| Rebase | `no-mistakes(rebase): <summary>` |
-| Review | `no-mistakes(review): <summary>` |
-| Test | `no-mistakes(test): <summary>` |
-| Document | `no-mistakes(document): <summary>` |
-| Lint | `no-mistakes(lint): <summary>` |
+| Rebase | `rebase: <summary>` |
+| Review | `review: <summary>` |
+| Test | `test: <summary>` |
+| Document | `document: <summary>` |
+| Lint | `lint: <summary>` |
 
 The push step commits any remaining uncommitted changes with `no-mistakes: apply agent fixes`.
 

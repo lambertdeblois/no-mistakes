@@ -1911,3 +1911,84 @@ func TestPRStep_PromptGuidesScopeToRealModule(t *testing.T) {
 		t.Errorf("expected PR prompt to convey typical module count heuristic, got:\n%s", capturedPrompt)
 	}
 }
+
+func TestPRStep_UsesRepositoryPRTemplateBodyWhenPresent(t *testing.T) {
+	t.Parallel()
+	dir, baseSHA, headSHA := setupGitRepo(t)
+
+	templateBody := "## What Changed\n\n- use repository template body\n\n## Checklist\n\n- [ ] reviewed"
+	templatePath := filepath.Join(dir, ".github", "PULL_REQUEST_TEMPLATE.md")
+	if err := os.MkdirAll(filepath.Dir(templatePath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(templatePath, []byte(templateBody), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	env, logFile := fakeGH(t, "")
+
+	ag := &mockAgent{
+		name: "test",
+		runFn: func(ctx context.Context, opts agent.RunOpts) (*agent.Result, error) {
+			payload := json.RawMessage(`{"title":"fix: keep title generation","body":"## What Changed\n\n- this agent body should be ignored when template exists"}`)
+			return &agent.Result{Output: payload}, nil
+		},
+	}
+	sctx := newTestContextWithDBRecords(t, ag, dir, baseSHA, headSHA, config.Commands{})
+	sctx.Env = env
+
+	step := &PRStep{}
+	if _, err := step.Execute(sctx); err != nil {
+		t.Fatal(err)
+	}
+
+	body := readFakeGHBodyArg(t, logFile)
+	if strings.TrimSpace(body) != strings.TrimSpace(templateBody) {
+		t.Fatalf("PR body = %q, want template body %q", body, templateBody)
+	}
+	if strings.Contains(body, "agent body should be ignored") {
+		t.Fatalf("expected PR body to come from template, got:\n%s", body)
+	}
+}
+
+func TestPRStep_FallsBackToRegularBodyWhenNoTemplateExists(t *testing.T) {
+	t.Parallel()
+	dir, baseSHA, headSHA := setupGitRepo(t)
+
+	env, logFile := fakeGH(t, "")
+
+	ag := &mockAgent{
+		name: "test",
+		runFn: func(ctx context.Context, opts agent.RunOpts) (*agent.Result, error) {
+			payload := json.RawMessage(`{"title":"fix: keep title generation","body":"## What Changed\n\n- keep regular generated body"}`)
+			return &agent.Result{Output: payload}, nil
+		},
+	}
+	sctx := newTestContextWithDBRecords(t, ag, dir, baseSHA, headSHA, config.Commands{})
+	sctx.Env = env
+
+	reviewFindings := `{"findings":[],"summary":"clean","risk_level":"low","risk_rationale":"normal change"}`
+	reviewStep, err := sctx.DB.InsertStepResult(sctx.Run.ID, types.StepReview)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := sctx.DB.UpdateStepStatus(reviewStep.ID, types.StepStatusCompleted); err != nil {
+		t.Fatal(err)
+	}
+	if err := sctx.DB.SetStepFindings(reviewStep.ID, reviewFindings); err != nil {
+		t.Fatal(err)
+	}
+
+	step := &PRStep{}
+	if _, err := step.Execute(sctx); err != nil {
+		t.Fatal(err)
+	}
+
+	body := readFakeGHBodyArg(t, logFile)
+	if !strings.Contains(body, "keep regular generated body") {
+		t.Fatalf("expected regular generated PR body, got:\n%s", body)
+	}
+	if !strings.Contains(body, "## Risk Assessment") {
+		t.Fatalf("expected deterministic generated sections without template, got:\n%s", body)
+	}
+}
